@@ -9,6 +9,8 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <iomanip>
+#include <sstream>
 
 #define TITLE_BOX 1025
 #define EDIT_BOX_ID 1026
@@ -75,7 +77,7 @@ char* calculate(char[], char[]);
 std::string longDoubleToString(LD);
 HWND editBox;
 
-LD firstN=NULL;
+LD firstN=99;
 UINT operation = BUTTON_PLUS;
 
 /*  Make the class name into a global variable  */
@@ -222,19 +224,39 @@ char* calculate(char* onScreen, char* arg)
         return onScreen;
     }
 
-    LD secondN = std::stold(onScreen);
+    LD secondN = std::stold(onScreen), result=NULL;
 
     switch (operation)
     {
         case BUTTON_PLUS:
-            return ;
+            result = firstN + secondN;
+            strcpy(ans, longDoubleToString(result).c_str());
+            break;
+        case BUTTON_MINUS:
+            result = firstN - secondN;
+            strcpy(ans, longDoubleToString(result).c_str());
+            break;
+        case BUTTON_MULTIPLY:
+            result = firstN * secondN;
+            strcpy(ans, longDoubleToString(result).c_str());
+            break;
+        case BUTTON_DIVIDE:
+            if (secondN == 0) {
+                ans[0]='I';
+                ans[0]='N';
+                ans[0]='F';
+            } else {
+                result = firstN / secondN;
+                strcpy(ans, longDoubleToString(result).c_str());
+            }
+            break;
         default:
+            ans[0]='H';
+            ans[1]='2';
+            ans[2]='\0';
             break;
     }
-    ans[0]='H';
-    ans[1]='2';
-    ans[2]='\0';
-
+    firstN = result;
     return ans;
 
 }
