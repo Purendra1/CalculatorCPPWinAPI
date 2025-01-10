@@ -7,18 +7,76 @@
 #include <tchar.h>
 #include <windows.h>
 #include <iostream>
+#include <map>
+#include <string>
 
-#define TEXT_BOX_ID 1025
+#define TITLE_BOX 1025
 #define EDIT_BOX_ID 1026
 #define MENU_FILE_ITEM_EXIT 1027
-#define PRESS_BUTTON_ID 1028
+
+#define BUTTON_1 1028
+#define BUTTON_2 1029
+#define BUTTON_3 1030
+#define BUTTON_C 1031
+#define BUTTON_PLUS 1032
+#define BUTTON_4 1033
+#define BUTTON_5 1034
+#define BUTTON_6 1035
+#define BUTTON_PLUS_MINUS 1036
+#define BUTTON_MINUS 1037
+#define BUTTON_7 1038
+#define BUTTON_8 1039
+#define BUTTON_9 1040
+#define BUTTON_SQUARE 1041
+#define BUTTON_MULTIPLY 1042
+#define BUTTON_BACKSPACE 1043
+#define BUTTON_0 1044
+#define BUTTON_DOT 1045
+#define BUTTON_EQUAL 1046
+#define BUTTON_DIVIDE 1047
+#define LD long double
+
+std::map<int, std::string> idToButtonText;
+void initMaps()
+{
+    idToButtonText[BUTTON_0]="0";
+    idToButtonText[BUTTON_1]="1";
+    idToButtonText[BUTTON_2]="2";
+    idToButtonText[BUTTON_3]="3";
+    idToButtonText[BUTTON_4]="4";
+    idToButtonText[BUTTON_5]="5";
+    idToButtonText[BUTTON_6]="6";
+    idToButtonText[BUTTON_7]="7";
+    idToButtonText[BUTTON_8]="8";
+    idToButtonText[BUTTON_9]="9";
+    idToButtonText[BUTTON_PLUS]="+";
+    idToButtonText[BUTTON_MINUS]="-";
+    idToButtonText[BUTTON_PLUS_MINUS]="+/-";
+    idToButtonText[BUTTON_MULTIPLY]="X";
+    idToButtonText[BUTTON_DIVIDE]="/";
+    idToButtonText[BUTTON_DOT]=".";
+    char32_t superscript2 = U'\u00B2'; //super script 2 unicode
+    idToButtonText[BUTTON_SQUARE]="x"+std::string(1, superscript2);
+    idToButtonText[BUTTON_EQUAL]="=";
+    idToButtonText[BUTTON_BACKSPACE]="<-";
+    idToButtonText[BUTTON_C]="C";
+}
+
 
 
 /*  Declare Windows procedure  */
 LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 void AddMenus(HWND);
 void AddControls(HWND);
-HWND EditWindow;
+void changeWindowFontSize(HWND);
+void performFunctionOnWindowInputAndDisplay(char* (*func)(char[], char[]), char[]);
+char* appendNumber(char[], char[]);
+char* calculate(char[], char[]);
+std::string longDoubleToString(LD);
+HWND editBox;
+
+LD firstN=NULL;
+UINT operation = BUTTON_PLUS;
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("Calculator");
@@ -28,6 +86,7 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
                      LPSTR lpszArgument,
                      int nCmdShow)
 {
+    initMaps();
     HWND hwnd;               /* This is the handle for our window */
     MSG messages;            /* Here messages to the application are saved */
     WNDCLASSEX wincl;        /* Data structure for the windowclass */
@@ -58,11 +117,11 @@ int WINAPI WinMain (HINSTANCE hThisInstance,
            0,                   /* Extended possibilites for variation */
            szClassName,         /* Classname */
            _T("Calculator"),       /* Title Text */
-           WS_OVERLAPPEDWINDOW, /* default window */
+           WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX | WS_MAXIMIZEBOX, /* default window */
            CW_USEDEFAULT,       /* Windows decides the position */
            CW_USEDEFAULT,       /* where the window ends up on the screen */
-           544,                 /* The programs width */
-           375,                 /* and height in pixels */
+           600,                 /* The programs width */
+           600,                 /* and height in pixels */
            HWND_DESKTOP,        /* The window is a child-window to desktop */
            NULL,                /* No menu */
            hThisInstance,       /* Program Instance handler */
@@ -98,11 +157,45 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case MENU_FILE_ITEM_EXIT:
                     DestroyWindow(hwnd);
                     break;
-                case PRESS_BUTTON_ID:
-                    char txt[100];
-                    GetWindowText(EditWindow,txt,100);
-                    SetWindowText(hwnd,txt);
+                case BUTTON_0:
+                case BUTTON_1:
+                case BUTTON_2:
+                case BUTTON_3:
+                case BUTTON_4:
+                case BUTTON_5:
+                case BUTTON_6:
+                case BUTTON_7:
+                case BUTTON_8:
+                case BUTTON_9:
+                    char num[1];
+                    strcpy(num,idToButtonText[wParam].c_str());
+                    performFunctionOnWindowInputAndDisplay(appendNumber,num);
                     break;
+                case BUTTON_EQUAL:
+                    performFunctionOnWindowInputAndDisplay(calculate,NULL);
+                    break;
+                case BUTTON_BACKSPACE:
+                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    break;
+                case BUTTON_DOT:
+                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    break;
+                case BUTTON_C:
+                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    break;
+                case BUTTON_PLUS_MINUS:
+                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    break;
+                case BUTTON_SQUARE:
+                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    break;
+                case BUTTON_PLUS:
+                case BUTTON_MINUS:
+                case BUTTON_MULTIPLY:
+                case BUTTON_DIVIDE:
+                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    break;
+
             }
             break;
         case WM_CREATE:
@@ -121,6 +214,54 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
     return 0;
 }
+char* calculate(char* onScreen, char* arg)
+{
+    char* ans = (char*)calloc(100,sizeof(char));
+    if (firstN==NULL)
+    {
+        return onScreen;
+    }
+
+    LD secondN = std::stold(onScreen);
+
+    switch (operation)
+    {
+        case BUTTON_PLUS:
+            return ;
+        default:
+            break;
+    }
+    ans[0]='H';
+    ans[1]='2';
+    ans[2]='\0';
+
+    return ans;
+
+}
+
+char* appendNumber(char* onScreen, char* num)
+{
+    char* ans = (char*)calloc(100,sizeof(char));
+    int i=0;
+    while(onScreen[i]!='\0') {
+        ans[i]=onScreen[i];
+        i++;
+    }
+
+    ans[i]=num[0];
+    i++;
+    ans[i]='\0';
+
+    return ans;
+}
+
+void performFunctionOnWindowInputAndDisplay(char* (*func)(char[],char[]), char* arg)
+{
+    char txt[100], *ans;
+    GetWindowText(editBox,txt,100);
+    ans = (char*)func(txt,arg);
+    SetWindowText(editBox,ans);
+}
 
 void AddMenus(HWND hwnd)
 {
@@ -136,41 +277,69 @@ void AddControls(HWND hWnd)
         CreateWindowEx(
             WS_EX_CLIENTEDGE,        // Extended style for client edge
             "STATIC",                 // Control class name
-            "Enter text here",                     // Label
+            "CALCULATOR",                     // Label
             WS_CHILD | WS_VISIBLE | WS_BORDER | SS_CENTER, // Style: child, visible, border, auto horizontal scroll
-            10, 10,                  // Position (x, y)
-            150, 30,                 // Size (width, height)
+            0, 0,                  // Position (x, y)
+            595, 30,                 // Size (width, height)
             hWnd,                    // Parent window
-            (HMENU)TEXT_BOX_ID,                // ID of the control (can be used to reference the control later)
+            (HMENU)TITLE_BOX,                // ID of the control (can be used to reference the control later)
             (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), // Instance handle
             NULL                     // No additional data
         );
 
-        EditWindow = CreateWindowEx(
+        editBox = CreateWindowEx(
             WS_EX_CLIENTEDGE,        // Extended style for client edge
-            "EDIT",                 // Control class name (EDIT control for text box)
-            "",                     // Initial text is empty
-            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_MULTILINE | ES_AUTOVSCROLL | WS_VSCROLL, // Style: child, visible, border, auto horizontal scroll
-            10, 50,                  // Position (x, y)
-            200, 30,                 // Size (width, height)
+            "EDIT",                 // Control class name
+            "",                     // Label
+            WS_CHILD | WS_VISIBLE | WS_BORDER | ES_RIGHT | ES_READONLY, // Style: child, visible, border, auto horizontal scroll
+            5, 35,                  // Position (x, y)
+            582.5, 70,                 // Size (width, height)
             hWnd,                    // Parent window
             (HMENU)EDIT_BOX_ID,                // ID of the control (can be used to reference the control later)
             (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), // Instance handle
             NULL                     // No additional data
         );
 
-        CreateWindowEx(
-            0,                    // Extended style
-            "BUTTON",             // Class name (narrow-character string)
-            "Change Title to the above text",           // Text (narrow-character string)
-            WS_CHILD | WS_VISIBLE | BS_PUSHBUTTON | SS_CENTER , // Style
-            10, 80,               // Position (x, y)
-            200, 50,              // Size (width, height)
-            hWnd,                 // Parent window
-            (HMENU)PRESS_BUTTON_ID,             // ID of the control
-            (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), // Instance handle
-            NULL                  // No additional data
-        );
+        changeWindowFontSize(editBox);
+
+        for(int y=120,i=0;i<4;i++,y+=110)
+        {
+            for(int x=15,j=0;j<5;j++,x+=110)
+            {
+                HWND button = CreateWindowEx(WS_EX_CLIENTEDGE,
+                "BUTTON", idToButtonText[(i*5+j+1028)].c_str(),
+                WS_TABSTOP | WS_VISIBLE | WS_CHILD | BS_PUSHBUTTON,
+                x, y, 100, 100,
+                hWnd, (HMENU)(i*5+j+1028), (HINSTANCE)GetWindowLongPtr(hWnd, GWLP_HINSTANCE), NULL);
+                changeWindowFontSize(button);
+            }
+        }
+}
+
+void changeWindowFontSize(HWND window)
+{
+        // Create a LOGFONT structure to define the font with a static size
+        LOGFONT logFont = {};
+        logFont.lfHeight = 30;  // Set the font size to 30 (static size)
+        lstrcpy(logFont.lfFaceName, TEXT("Arial"));  // Set the font name to Arial
+
+        // Create the font with CreateFontIndirect
+        HFONT hFont = CreateFontIndirect(&logFont);
+
+        // Set the font for the Edit Control (static size)
+        SendMessage(window, WM_SETFONT, (WPARAM)hFont, TRUE);
+}
 
 
+std::string longDoubleToString(long double num) {
+    std::ostringstream oss;
+    oss << std::fixed << num;
+    std::string result = oss.str();
+    if (result.find('.') != std::string::npos) {
+        result.erase(result.find_last_not_of('0') + 1, std::string::npos);
+        if (result.back() == '.') {
+            result.pop_back();
+        }
+    }
+    return result;
 }
