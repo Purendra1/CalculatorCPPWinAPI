@@ -4,10 +4,13 @@
 	<string>
 	<sstream>
 
-1736511994 source:c:\users\admin\documents\code\calculatorcppwinapi\calculator\main.cpp
+1736765033 source:c:\users\admin\documents\code\calculatorcppwinapi\calculator\main.cpp
 	<tchar.h>
 	<windows.h>
 	<iostream>
 	<map>
-	<cstdarg>
+	<string>
+	<cstring>
+	<iomanip>
+	<sstream>
 

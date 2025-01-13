@@ -9,6 +9,7 @@
 #include <iostream>
 #include <map>
 #include <string>
+#include <cstring>
 #include <iomanip>
 #include <sstream>
 
@@ -19,7 +20,7 @@
 #define BUTTON_1 1028
 #define BUTTON_2 1029
 #define BUTTON_3 1030
-#define BUTTON_C 1031
+#define BUTTON_BACKSPACE 1031
 #define BUTTON_PLUS 1032
 #define BUTTON_4 1033
 #define BUTTON_5 1034
@@ -31,7 +32,7 @@
 #define BUTTON_9 1040
 #define BUTTON_SQUARE 1041
 #define BUTTON_MULTIPLY 1042
-#define BUTTON_BACKSPACE 1043
+#define BUTTON_C 1043
 #define BUTTON_0 1044
 #define BUTTON_DOT 1045
 #define BUTTON_EQUAL 1046
@@ -71,14 +72,24 @@ LRESULT CALLBACK WindowProcedure (HWND, UINT, WPARAM, LPARAM);
 void AddMenus(HWND);
 void AddControls(HWND);
 void changeWindowFontSize(HWND);
+
 void performFunctionOnWindowInputAndDisplay(char* (*func)(char[], char[]), char[]);
+
 char* appendNumber(char[], char[]);
 char* calculate(char[], char[]);
+char* backspace(char[], char[]);
+char* addDecimal(char[], char[]);
+char* clearScreen(char[], char[]);
+char* changePlusMinus(char[], char[]);
+char* square(char[], char[]);
+char* changeOperation(char[], char[]);
+
+bool isStringEmpty(char*);
 std::string longDoubleToString(LD);
 HWND editBox;
 
-LD firstN=99;
-UINT operation = BUTTON_PLUS;
+LD firstN=NULL;
+UINT operation = NULL;
 
 /*  Make the class name into a global variable  */
 TCHAR szClassName[ ] = _T("Calculator");
@@ -177,25 +188,27 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                     performFunctionOnWindowInputAndDisplay(calculate,NULL);
                     break;
                 case BUTTON_BACKSPACE:
-                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    performFunctionOnWindowInputAndDisplay(backspace,NULL);
                     break;
                 case BUTTON_DOT:
-                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    performFunctionOnWindowInputAndDisplay(addDecimal,NULL);
                     break;
                 case BUTTON_C:
-                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    performFunctionOnWindowInputAndDisplay(clearScreen,NULL);
                     break;
                 case BUTTON_PLUS_MINUS:
-                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    performFunctionOnWindowInputAndDisplay(changePlusMinus,NULL);
                     break;
                 case BUTTON_SQUARE:
-                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    performFunctionOnWindowInputAndDisplay(square,NULL);
                     break;
                 case BUTTON_PLUS:
                 case BUTTON_MINUS:
                 case BUTTON_MULTIPLY:
                 case BUTTON_DIVIDE:
-                    performFunctionOnWindowInputAndDisplay(NULL,NULL);
+                    char* op = (char*)calloc(4,sizeof(char));
+                    strcpy(op, std::to_string(wParam).c_str());
+                    performFunctionOnWindowInputAndDisplay(changeOperation,op);
                     break;
 
             }
@@ -216,6 +229,79 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
 
     return 0;
 }
+
+char* changeOperation(char* onScreen, char* arg)
+{
+    unsigned int op = static_cast<unsigned int>(std::stoul(arg));
+    operation = op;
+    char* zero = "0";
+    if (isStringEmpty(onScreen))
+    {
+        firstN = 0;
+        return zero;
+    }
+    else
+    {
+        if (firstN == NULL)
+        {
+            LD os = std::stold(onScreen);
+            firstN = os;
+            return zero;
+        }
+        else
+        {
+            return calculate(onScreen, NULL);
+        }
+    }
+}
+
+char* square(char* onScreen, char* arg)
+{
+    LD num = std::stold(onScreen);
+    return strcpy((char*)calloc(100, sizeof(char)), longDoubleToString(num*num).c_str());
+}
+
+
+char* changePlusMinus(char* onScreen, char* arg)
+{
+    return strcpy((char*)calloc(100, sizeof(char)), longDoubleToString(std::stold(onScreen) * -1).c_str());
+}
+
+char* clearScreen(char* onScreen, char* arg)
+{
+    firstN = NULL;
+    operation = NULL;
+    return (char*)calloc(0,sizeof(char));
+}
+
+char* addDecimal(char* onScreen, char* arg)
+{
+    if(!strchr(onScreen, '.'))
+    {
+        size_t length = strlen(onScreen);
+        onScreen[length]='.';
+        onScreen[length+1]='\0';
+    }
+
+    return onScreen;
+}
+
+char* backspace(char* onScreen, char* arg)
+{
+    LD os = std::stold(onScreen);
+
+    if(os==0)
+    {
+        return onScreen;
+    }
+
+    size_t length = strlen(onScreen);
+    onScreen[length-1]='\0';
+
+    return onScreen;
+}
+
+
 char* calculate(char* onScreen, char* arg)
 {
     char* ans = (char*)calloc(100,sizeof(char));
@@ -251,9 +337,6 @@ char* calculate(char* onScreen, char* arg)
             }
             break;
         default:
-            ans[0]='H';
-            ans[1]='2';
-            ans[2]='\0';
             break;
     }
     firstN = result;
@@ -263,6 +346,11 @@ char* calculate(char* onScreen, char* arg)
 
 char* appendNumber(char* onScreen, char* num)
 {
+    if (!isStringEmpty(onScreen) && !strchr(onScreen, '.') && std::stold(onScreen)==0)
+    {
+        return num;
+    }
+
     char* ans = (char*)calloc(100,sizeof(char));
     int i=0;
     while(onScreen[i]!='\0') {
@@ -364,4 +452,9 @@ std::string longDoubleToString(long double num) {
         }
     }
     return result;
+}
+
+bool isStringEmpty(char* str)
+{
+    return str == nullptr || str[0] == '\0';
 }
