@@ -16,6 +16,7 @@
 #define TITLE_BOX 1025
 #define EDIT_BOX_ID 1026
 #define MENU_FILE_ITEM_EXIT 1027
+#define MENU_HELP_ITEM_ABOUT 1050
 
 #define BUTTON_1 1028
 #define BUTTON_2 1029
@@ -170,6 +171,13 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
                 case MENU_FILE_ITEM_EXIT:
                     DestroyWindow(hwnd);
                     break;
+                case MENU_HELP_ITEM_ABOUT:
+                    MessageBeep(MB_ICONASTERISK);
+                    MessageBox(NULL,            // Parent window (NULL means no parent window)
+                       "Created by Purendra Srivastava",  // Message text
+                       "About",  // Title of the message box
+                       MB_OK);
+                    break;
                 case BUTTON_0:
                 case BUTTON_1:
                 case BUTTON_2:
@@ -219,9 +227,6 @@ LRESULT CALLBACK WindowProcedure (HWND hwnd, UINT message, WPARAM wParam, LPARAM
             break;
         case WM_DESTROY:
             PostQuitMessage (0);       /* send a WM_QUIT to the message queue */
-            break;
-        case WM_LBUTTONUP:
-            std::cout<<"Click\n";
             break;
         default:                      /* for messages that we don't deal with */
             return DefWindowProc (hwnd, message, wParam, lParam);
@@ -377,8 +382,11 @@ void AddMenus(HWND hwnd)
 {
     HMENU hMenu = CreateMenu();
     HMENU hFileMenu = CreateMenu();
+    HMENU hHelpMenu = CreateMenu();
     AppendMenu(hFileMenu, MF_STRING, MENU_FILE_ITEM_EXIT, "Exit");
+    AppendMenu(hHelpMenu, MF_STRING, MENU_HELP_ITEM_ABOUT, "About");
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hFileMenu, "File");
+    AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hHelpMenu, "Help");
     SetMenu(hwnd, hMenu);
 }
 
